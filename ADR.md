@@ -3,6 +3,9 @@
 * Due to the some similarity between the `Quectel EC800M` module and the
 `Lynq L511` module, we can try to develop a driver for `Lynq L511` and use some
 of the components of the resulting driver on the `Quectel EC800M`.
+* Development can starts off from the readily available `urban-power-4g` board
+first then move on to actual product hardware. This diversify the development
+platform. Some sample code can be used in other products as well.
 * The design of the driver should change to allow faster boot sequence. Current
 solution will wait for all the init sequence to return which can take a long
 time to complete. This will also clear up some of the configuration options
