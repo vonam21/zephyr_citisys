@@ -1,0 +1,17 @@
+identifier: urb_power_4g
+name: Urbaniti 4G modem for power node
+type: mcu
+arch: arm
+ram: 128
+flash: 512
+toolchain:
+  - zephyr
+  - gnuarmemb
+  - xtools
+supported:
+  - ble
+  - gpio
+  - spi
+  - uart
+  - lte
+  - gps

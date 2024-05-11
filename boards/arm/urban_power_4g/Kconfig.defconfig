@@ -1,0 +1,46 @@
+if BOARD_URB_POWER_4G
+
+choice
+	prompt "Hawkbit mode"
+	default HAWKBIT_POLLING
+	depends on HAWKBIT
+
+config HAWKBIT_POLLING
+	bool "Hawkbit Polling mode"
+	help
+	  Polling mode runs automatically on a predefined period, probing the
+	  server for updates and installing them without requiring user
+	  intervention.
+
+config HAWKBIT_MANUAL
+	bool "Hawkbit manual mode"
+	help
+	  Manual mode requires the user to call the server probe and then, if
+	  there is an available update, also requires the user to decide if
+	  it is appropriate to update now or later.
+
+endchoice
+
+config MBEDTLS_PEM_CERTIFICATE_FORMAT
+	bool "Support for PEM certificate format"
+	help
+	  By default only DER (binary) format of certificates is supported. Enable
+	  this option to enable support for PEM format.
+	  
+config MQTT_CLEAN_SESSION
+    bool "MQTT Clean Session Flag."
+    depends on MQTT_LIB && NETWORKING
+    help
+      When a client connects to a MQTT broker using a persistent session,
+      the message broker saves all subscriptions. When the client
+      disconnects, the message broker stores unacknowledged QoS 1 messages
+      and new QoS 1 messages published to topics to which the client is
+      subscribed. When the client reconnects to the persistent session,
+      all subscriptions are reinstated and all stored messages are sent to
+      the client. Setting this flag to 0 allows the client to create a
+      persistent session.
+
+config BOARD
+	default "URB_POWER_4G"
+
+endif # BOARD_URB_POWER_4G

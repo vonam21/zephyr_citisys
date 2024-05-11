@@ -1,0 +1,149 @@
+/dts-v1/;
+#include <nordic/nrf52840_qiaa.dtsi>
+
+/ {
+	model = "Urbaniti power node - NRF52840 QIAA";
+
+	chosen {
+		zephyr,bt,uart = &uart0;
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_partition;
+	};
+
+	fstab {
+		compatible = "zephyr,fstab";
+		lfs1: lfs1 {
+			compatible = "zephyr,fstab,littlefs";
+			mount-point = "/lfs1";
+			partition = <&lfs1_part>;
+			automount;
+			read-size = <16>;
+			prog-size = <16>;
+			cache-size = <64>;
+			lookahead-size = <32>;
+			block-cycles = <512>;
+		};
+	};
+
+	leakage_current {
+		compatible = "voltage-divider";
+		io-channels = <&adc 6>;
+		output-ohms = <1>;
+		full-ohms = <1>;
+	};
+};
+
+main_flash: &qspi {
+	status = "okay";
+	pinctrl-0 = <&qspi_default>;
+	pinctrl-1 = <&qspi_sleep>;
+	pinctrl-names = "default", "sleep";
+	mx25l128: mx25r12835f@0 {
+		compatible = "nordic,qspi-nor";
+		reg = <0>;
+		writeoc = "pp4io";
+		readoc = "read4io";
+		sck-frequency = <8000000>;
+		jedec-id = [c2 20 18];
+		sfdp-bfp = [
+			e5 20 f1 ff  ff ff ff 07  44 eb 08 6b  08 3b 04 bb
+			fe ff ff ff  ff ff 00 ff  ff ff 44 eb  0c 20 0f 52
+			10 d8 00 ff  11 52 c9 00  81 a8 04 c3  44 82 68 44
+			30 b0 30 b0  f7 c4 d5 5c  00 be 29 ff  f0 d0 ff ff
+		];
+		size = <134217728>;
+		has-dpd;
+		t-enter-dpd = <10000>;
+		t-exit-dpd = <35000>;
+	};
+};
+
+&mx25l128 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		lfs1_part: partition@0 {
+			label = "external";
+			reg = <0x00000000 0x00020000>;
+		};
+		slot1_partition: partition@20000 {
+			label = "image-1";
+			reg = <0x00020000 0x00067000>;
+		};
+	};
+};
+
+&gpiote {
+	status = "okay";
+};
+
+&gpio0 {
+	status = "okay";
+};
+
+&gpio1 {
+	status = "okay";
+};
+
+&adc {
+	status = "okay";
+};
+
+&uicr {
+	gpio-as-nreset;
+};
+
+uart_modbus: &uart0 {
+	compatible = "nordic,nrf-uarte";
+	current-speed = <9600>;
+	pinctrl-0 = <&uart_modbus_default>;
+	pinctrl-1 = <&uart_modbus_sleep>;
+	pinctrl-names = "default", "sleep";
+};
+
+uart_modem: &uart1 {
+	compatible = "nordic,nrf-uarte";
+	current-speed = <230400>;
+	pinctrl-0 = <&uart_modem_default>;
+	pinctrl-1 = <&uart_modem_sleep>;
+	pinctrl-names = "default", "sleep";
+
+};
+
+&flash0 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		boot_partition: partition@0 {
+			label = "mcuboot";
+			reg = <0x000000000 0x0000C000>;
+		};
+		slot0_partition: partition@c000 {
+			label = "image-0";
+			reg = <0x0000C000 0x0006A000>;
+		};
+		slot2_partition: partition@76000 {
+			label = "image-2";
+			reg = <0x00076000 0x0006A000>;
+		};
+
+		/*
+		 * The flash starting at 0x000f8000 and ending at
+		 * 0x000fffff is reserved for use by the application.
+		 */
+
+		/*
+		 * Storage partition will be used by FCB/LittleFS/NVS
+		 * if enabled.
+		 */
+		storage_partition: partition@e0000 {
+			label = "storage";
+			reg = <0x000e0000 0x00020000>;
+		};
+	};
+};
