@@ -1,0 +1,21 @@
+/ {
+    outputs {
+        compatible= "gpio-leds";
+        uarttx: uart_tx {
+            gpios = <&gpio0 26 GPIO_ACTIVE_LOW>;
+        };
+        uartrx: uart_rx {
+            gpios = <&gpio0 4 GPIO_ACTIVE_LOW>;
+        };
+    };
+    
+    uart_modbus {
+        compatible= "gpio-leds";
+        modbustx: modbus_tx {
+            gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
+        };
+        modbusrx: modbus_rx {
+            gpios = <&gpio0 8 GPIO_ACTIVE_LOW>;
+        };
+    };
+};
