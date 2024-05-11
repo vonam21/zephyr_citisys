@@ -25,7 +25,7 @@ For instance, if we have the firmware for a board `board_1` related to this
 project, we should have a folder named:
 
 ```
-board_1
+gps_tracker_board_1
 ```
 
 in the app folder. This simplifies the release process as we have absolute
