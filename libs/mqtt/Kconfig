@@ -1,0 +1,42 @@
+menuconfig LIBS_MQTT
+    bool "Enable MQTT library support"
+    depends on MQTT
+    depends on MQTT_CLEAN_SESSION
+    default n
+
+if LIBS_MQTT
+
+config LIBS_MQTT_MAX_CLIENT_SUPPORT
+    int "Max number of concurrent clients that this library supports"
+    default 1
+
+config LIBS_MQTT_MAX_HOST_LENGTH
+    int "Max host name length permissible"
+    default 64
+
+config LIBS_MQTT_MAX_CLIENT_ID_LENGTH
+    int "Max client id length permissible"
+    default 32
+
+config LIBS_MQTT_MAX_USERNAME_LENGTH
+    int "Max username length permissible"
+    default 32
+
+config LIBS_MQTT_MAX_PASSWORD_LENGTH
+    int "Max password length permissible"
+    default 32
+
+config LIBS_MQTT_MAX_TOPIC_LENGTH
+    int "Max topic length permissible"
+    default 128
+
+endif # LIBS_MQTT
+
+if LIBS_MQTT
+
+module = LIBS_MQTT
+module-str = LIBS_MQTT
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # LIBS_MQTT
+
