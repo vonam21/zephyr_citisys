@@ -1,0 +1,4 @@
+&uart_modem {
+    status = "okay";
+};
+

@@ -1,0 +1,4 @@
+name: modem
+append:
+  EXTRA_CONF_FILE: modem.conf
+  EXTRA_DTC_OVERLAY_FILE: modem.overlay
