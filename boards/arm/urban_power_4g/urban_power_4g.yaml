@@ -1,4 +1,4 @@
-identifier: urb_power_4g
+identifier: urban_power_4g
 name: Urbaniti 4G modem for power node
 type: mcu
 arch: arm

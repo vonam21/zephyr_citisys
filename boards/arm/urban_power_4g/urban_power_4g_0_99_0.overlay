@@ -15,10 +15,10 @@
 };
 
 &uart_modem {
-	/* Lynq l50x */
-	lynq_l50x: lynq_l50x {
-		compatible = "lynq,l50x";
-		mdm-power-gpios = <&gpio0 12 GPIO_ACTIVE_HIGH>;
+	/* Lynq l502 */
+	lynq_l5xx: lynq_l5xx {
+		compatible = "lynq,l5xx";
+		mdm-power-gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
 		mdm-reset-gpios = <&gpio1 07 GPIO_ACTIVE_LOW>; //incorrect
 		status = "okay";
 	};
@@ -37,7 +37,7 @@ ethernet_spi: &spi0{
 		reg = <0x0>;
 		local-mac-address = [8F 3C 52 71 62 53];
 		/* Errata B7/1 specifies min 8Mhz, 20MHz max according to RM */
-		spi-max-frequency = <10000000>;
+		spi-max-frequency = <20000000>;
 		int-gpios = <&gpio1 12 GPIO_ACTIVE_LOW>;	/* INT */
 	};
 };

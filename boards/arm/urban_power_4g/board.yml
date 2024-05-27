@@ -1,0 +1,15 @@
+board:
+  name: urban_power_4g
+  vendor: unknown
+  socs:
+    - name: nrf52840
+  revision:
+    format: major.minor.patch
+    default: 3.5.0
+    exact: true
+    revisions:
+      - name: 0.99.0
+      - name: 1.0.1
+      - name: 3.5.0
+
+
