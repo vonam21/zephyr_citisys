@@ -1,0 +1,10 @@
+menuconfig LIBS_MODEM
+    bool "Project's supported modems"
+    select MODEM
+    help
+        List of nisse supported modems
+
+if LIBS_MODEM
+rsource "modem/Kconfig"
+endif
+

@@ -1,2 +1,14 @@
+menu "libs_project"
+
+menuconfig LIBS_PROJECT
+    bool "Enable project libraries"
+    help
+      Project-scoped library support.
+
+if LIBS_PROJECT
 rsource "mqtt/Kconfig"
+rsource "drivers/Kconfig"
+endif
+
+endmenu
 

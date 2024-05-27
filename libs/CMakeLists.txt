@@ -1,4 +1,9 @@
-zephyr_system_include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+set(PROJECT_LIBS_BASE ${CMAKE_CURRENT_SOURCE_DIR})
 
-zephyr_sources(utils.c)
+if (CONFIG_LIBS_PROJECT)
+    list(APPEND SYSCALL_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+    zephyr_sources(utils.c)
+    add_subdirectory(drivers)
+endif()
 
