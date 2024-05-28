@@ -152,7 +152,7 @@ static void pin_init(void)
 
 	/* MDM_POWER -> 1 for 500-1000 msec. */
 	gpio_pin_set_dt(&power_gpio, 0);
-	k_sleep(K_MSEC(200));
+	k_sleep(K_MSEC(750));
 
 	/* MDM_POWER -> 0 and wait for ~500msecs as UART remains inl"inactive"
      * state for some time after the power signal is enabled.
