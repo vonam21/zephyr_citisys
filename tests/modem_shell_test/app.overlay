@@ -1,0 +1,4 @@
+&uart_modem {
+    current-speed = <230400>;
+};
+
