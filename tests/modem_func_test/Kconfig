@@ -1,0 +1,8 @@
+module = APPLICATION
+module-str = APPLICATION
+source "subsys/logging/Kconfig.template.log_config"
+
+source "Kconfig.zephyr"
+
+
+
