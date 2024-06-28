@@ -5,6 +5,7 @@ config MODEM_LYNQ_L5XX
 	select MODEM_CONTEXT
 	select MODEM_CMD_HANDLER
 	select MODEM_IFACE_UART
+	select NET_SOCKETS_OFFLOAD
 	help
 	  Choose this setting to enable LYNQ L5XX LTE-CatM1/NB-IoT modem
 	  driver.

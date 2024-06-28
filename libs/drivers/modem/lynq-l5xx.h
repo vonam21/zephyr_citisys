@@ -3,6 +3,8 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/net/net_if.h>
+#include <zephyr/net/offloaded_netdev.h>
+#include <zephyr/net/socket_offload.h>
 #include <zephyr/types.h>
 /* Direct "include"s from drivers/modem */
 #include <modem_cmd_handler.h>
@@ -60,6 +62,8 @@
 struct modem_data {
 	/* modem interface */
 	struct modem_iface_uart_data iface_data;
+	struct net_if *net_iface;
+	uint8_t mac_addr[6];
 	uint8_t iface_rb_buf[MDM_MAX_DATA_LENGTH];
 
 	/* modem cmds */

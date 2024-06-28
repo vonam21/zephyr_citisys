@@ -118,6 +118,54 @@ static const struct setup_cmd setup_cmds[] = {
     SETUP_CMD_NOHANDLE("AT+CTZU=1"),
 };
 
+static inline uint32_t hash32(char *str, int len)
+{
+#define HASH_MULTIPLIER 37
+
+	uint32_t h = 0;
+	int i;
+
+	for (i = 0; i < len; ++i) {
+		h = (h * HASH_MULTIPLIER) + str[i];
+	}
+
+	return h;
+}
+
+static inline uint8_t *modem_get_mac(const struct device *dev)
+{
+	struct modem_data *data = dev->data;
+	uint32_t hash_value;
+
+	data->mac_addr[0] = 0x00;
+	data->mac_addr[1] = 0x10;
+
+	/* use IMEI for mac_addr */
+	hash_value = hash32(mdata.mdm_imei, strlen(mdata.mdm_imei));
+
+	UNALIGNED_PUT(hash_value, (uint32_t *)(data->mac_addr + 2));
+
+	return data->mac_addr;
+}
+
+/* Setup the Modem NET Interface. */
+static void modem_net_iface_init(struct net_if *iface)
+{
+	const struct device *dev = net_if_get_device(iface);
+	struct modem_data *data = dev->data;
+
+	/* Direct socket offload used instead of net offload: */
+	net_if_set_link_addr(iface, modem_get_mac(dev), sizeof(data->mac_addr),
+	    NET_LINK_ETHERNET);
+	data->net_iface = iface;
+
+#if defined(CONFIG_DNS_RESOLVER) || defined(CONFIG_MODEM_LYNQ_L5XX_DNS_RESOLVER)
+	socket_offload_dns_register(&offload_dns_ops);
+#endif
+
+	net_if_socket_offload_set(iface, offload_socket);
+}
+
 /* Func: modem_rx
  * Desc: Thread to process all messages received from the Modem.
  */
@@ -277,7 +325,9 @@ static int modem_init(const struct device *dev)
 error:
 	return err;
 }
-
+static struct offloaded_if_api api_funcs = {
+    .iface_api.init = modem_net_iface_init,
+};
 /* Register the device with the Networking stack. */
 NET_DEVICE_DT_INST_OFFLOAD_DEFINE(0, modem_init, NULL, &mdata, NULL,
     CONFIG_MODEM_LYNQ_L5XX_INIT_PRIORITY, &api_funcs, MDM_MAX_DATA_LENGTH);
