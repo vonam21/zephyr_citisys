@@ -15,7 +15,9 @@ static int modem_setup(void);
 static struct k_thread modem_rx_thread;
 static struct modem_data mdata;
 static struct modem_context mctx;
-
+static struct k_work_q modem_workq;
+static K_KERNEL_STACK_DEFINE(
+    modem_workq_stack, CONFIG_MODEM_LYNQ_L5XX_RX_WORKQ_STACK_SIZE);
 static K_KERNEL_STACK_DEFINE(
     modem_rx_stack, CONFIG_MODEM_LYNQ_L5XX_RX_STACK_SIZE);
 NET_BUF_POOL_DEFINE(
@@ -219,7 +221,8 @@ static int modem_setup(void)
 {
 	int err = 0;
 	int at_retry = 0;
-
+	/* stop sim info query work */
+	k_work_cancel_delayable(&mdata.sim_info_query_work);
 	/* Setup the pins to ensure that Modem is enabled. */
 	pin_init();
 
@@ -238,6 +241,8 @@ static int modem_setup(void)
 	err = modem_cmd_handler_setup_cmds(&mctx.iface, &mctx.cmd_handler,
 	    setup_cmds, ARRAY_SIZE(setup_cmds), &mdata.sem_response,
 	    MDM_CMD_TIMEOUT);
+	k_work_reschedule_for_queue(
+	    &modem_workq, &mdata.sim_info_query_work, K_SECONDS(2));
 	return err;
 }
 
@@ -249,7 +254,8 @@ static int modem_init(const struct device *dev)
 	ARG_UNUSED(dev);
 
 	k_sem_init(&mdata.sem_response, 0, 1);
-
+	k_work_queue_start(&modem_workq, modem_workq_stack,
+	    K_KERNEL_STACK_SIZEOF(modem_workq_stack), K_PRIO_COOP(7), NULL);
 	/* cmd handler setup */
 	const struct modem_cmd_handler_config cmd_handler_config = {
 	    .match_buf = &mdata.cmd_match_buf[0],
@@ -319,7 +325,8 @@ static int modem_init(const struct device *dev)
 	    K_KERNEL_STACK_SIZEOF(modem_rx_stack), (k_thread_entry_t)modem_rx,
 	    NULL, NULL, NULL, K_PRIO_COOP(7), 0, K_NO_WAIT);
 	k_thread_name_set(thread_id, "modem_rx");
-
+	k_work_init_delayable(
+	    &mdata.sim_info_query_work, modem_query_sim_persecond);
 	return modem_setup();
 
 error:

@@ -86,7 +86,8 @@ struct modem_data {
 	char mdm_iccid[MDM_ICCID_LENGTH];
 #endif /* #if defined(CONFIG_MODEM_SIM_NUMBERS) */
 	int mdm_rssi;
-
+	/* SIM card work */
+	struct k_work_delayable sim_info_query_work;
 	/* Semaphore(s) */
 	struct k_sem sem_response;
 };

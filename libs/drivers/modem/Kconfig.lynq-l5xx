@@ -18,6 +18,14 @@ config MODEM_LYNQ_L5XX_RX_STACK_SIZE
 	help
 	  This stack is used by the LYNQ L5XX RX thread.
 
+config MODEM_LYNQ_L5XX_RX_WORKQ_STACK_SIZE
+	int "Stack size for the LYNQ L5XX modem driver work queue"
+	default 2048
+	help
+	  This stack is used by the work queue to pass off net_pkt data
+	  to the rest of the network stack, letting the rx thread continue
+	  processing data.
+	  
 config MODEM_LYNQ_L5XX_INIT_PRIORITY
 	int "LYNQ L5XX driver init priority"
 	default 80
