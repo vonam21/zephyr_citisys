@@ -22,34 +22,35 @@
 
 #define APP_CA_CERT_TAG 1
 
-/* @brief Callback to various event 
+/* @brief Callback to various event
  *
  * on_topic_cb      Refer that application do not process the packet in this
- *                  callback but instead create a separate thread and pass the 
+ *                  callback but instead create a separate thread and pass the
  *                  data to that thread instead
  * */
 struct mqtt_callback {
-    void (*on_topic_cb)(struct mqtt_client *const client, const uint8_t *topic, size_t payload_len);
-    void (*on_disconnect)(struct mqtt_client *const client, int reason);
-    void (*on_connected)(struct mqtt_client *const client);
-    void (*on_subscribed)(struct mqtt_client *const client);
+	void (*on_topic_cb)(struct mqtt_client *const client,
+	    const uint8_t *topic, size_t payload_len);
+	void (*on_disconnect)(struct mqtt_client *const client, int reason);
+	void (*on_connected)(struct mqtt_client *const client);
+	void (*on_subscribed)(struct mqtt_client *const client);
 };
 
 /* Client connection params */
 struct mqtt_connection_params {
-    char host[CONFIG_LIBS_MQTT_MAX_HOST_LENGTH];
-    char client_id[CONFIG_LIBS_MQTT_MAX_CLIENT_ID_LENGTH];
-    char user_name[CONFIG_LIBS_MQTT_MAX_USERNAME_LENGTH];
-    char password[CONFIG_LIBS_MQTT_MAX_PASSWORD_LENGTH];
-    char will_topic[CONFIG_LIBS_MQTT_MAX_TOPIC_LENGTH];
-    char will_message[64];
-    char port[6];
+	char host[CONFIG_LIBS_MQTT_MAX_HOST_LENGTH];
+	char client_id[CONFIG_LIBS_MQTT_MAX_CLIENT_ID_LENGTH];
+	char user_name[CONFIG_LIBS_MQTT_MAX_USERNAME_LENGTH];
+	char password[CONFIG_LIBS_MQTT_MAX_PASSWORD_LENGTH];
+	char will_topic[CONFIG_LIBS_MQTT_MAX_TOPIC_LENGTH];
+	char will_message[64];
+	char port[6];
 };
 
 /* Client params to add new client */
 struct mqtt_client_params {
-    struct mqtt_connection_params connection_params;
-    struct mqtt_callback callbacks;
+	struct mqtt_connection_params connection_params;
+	struct mqtt_callback callbacks;
 };
 
 /* @brief Initialize the mqtt library
@@ -60,7 +61,7 @@ int libs_mqtt_init();
 /* @brief Subscribe to mqtt topic with client_fd
  *
  * @params client_fd        Client file descriptor
- * @params mqtt_topic       Topic to subscribe to 
+ * @params mqtt_topic       Topic to subscribe to
  * @params qos              The specified quality-of-service
  *
  * @return 0                if the call was successful
@@ -71,7 +72,7 @@ int libs_mqtt_subscribe(int client_fd, uint8_t *mqtt_topic, int qos);
 /* @brief Publish to mqtt topic with client_fd
  *
  * @params client_fd        Client file descriptor
- * @params mqtt_topic       Topic to subscribe to 
+ * @params mqtt_topic       Topic to subscribe to
  * @params qos              The specified quality-of-service
  * @params payload          Pointer to the payload
  * @params payload_len      The payload length
@@ -80,7 +81,7 @@ int libs_mqtt_subscribe(int client_fd, uint8_t *mqtt_topic, int qos);
  *         < 0              if the call was unsuccessful
  * */
 int libs_mqtt_publish(int client_fd, uint8_t *mqtt_topic, enum mqtt_qos qos,
-                        uint8_t *payload, size_t payload_len);
+    uint8_t *payload, size_t payload_len);
 
 /* @brief Disconnect from mqtt with client_fd
  *
@@ -102,5 +103,4 @@ int libs_mqtt_disconnect(int client_fd);
  **/
 int libs_mqtt_connect(const struct mqtt_client_params *params);
 
-#endif // _LIBS_MQTT_H__
-
+#endif  // _LIBS_MQTT_H__

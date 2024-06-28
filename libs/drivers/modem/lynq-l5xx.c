@@ -1,13 +1,11 @@
 #define DT_DRV_COMPAT lynq_l5xx
 
 #include <stdlib.h>
-
-#include <zephyr/types.h>
-#include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/init.h>
-
+#include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/types.h>
 LOG_MODULE_REGISTER(modem_lynq_l5xx, CONFIG_MODEM_LOG_LEVEL);
 
 #include "lynq-l5xx.h"
@@ -18,26 +16,27 @@ static struct k_thread modem_rx_thread;
 static struct modem_data mdata;
 static struct modem_context mctx;
 
-static K_KERNEL_STACK_DEFINE(modem_rx_stack,
-        CONFIG_MODEM_LYNQ_L5XX_RX_STACK_SIZE);
-NET_BUF_POOL_DEFINE(mdm_recv_pool,
-        MDM_RECV_MAX_BUF, MDM_RECV_BUF_SIZE, 0, NULL);
+static K_KERNEL_STACK_DEFINE(
+    modem_rx_stack, CONFIG_MODEM_LYNQ_L5XX_RX_STACK_SIZE);
+NET_BUF_POOL_DEFINE(
+    mdm_recv_pool, MDM_RECV_MAX_BUF, MDM_RECV_BUF_SIZE, 0, NULL);
 
-static const struct gpio_dt_spec power_gpio = GPIO_DT_SPEC_INST_GET(0,
-        mdm_power_gpios);
+static const struct gpio_dt_spec power_gpio =
+    GPIO_DT_SPEC_INST_GET(0, mdm_power_gpios);
 #if DT_INST_NODE_HAS_PROP(0, mdm_reset_gpios)
-static const struct gpio_dt_spec reset_gpio = GPIO_DT_SPEC_INST_GET(0,
-        mdm_reset_gpios);
+static const struct gpio_dt_spec reset_gpio =
+    GPIO_DT_SPEC_INST_GET(0, mdm_reset_gpios);
 #endif
 #if DT_INST_NODE_HAS_PROP(0, mdm_dtr_gpios)
-static const struct gpio_dt_spec dtr_gpio = GPIO_DT_SPEC_INST_GET(0,
-        mdm_dtr_gpios);
+static const struct gpio_dt_spec dtr_gpio =
+    GPIO_DT_SPEC_INST_GET(0, mdm_dtr_gpios);
 #endif
 
 /* Func: modem_atoi
  * Desc: Convert string to long integer, but handle errors
  */
-static int modem_atoi(const char *s, const int err_value, const char *desc, const char *func)
+static int modem_atoi(
+    const char *s, const int err_value, const char *desc, const char *func)
 {
 	int ret;
 	char *endptr;
@@ -100,23 +99,23 @@ MODEM_CMD_DEFINE(on_cmd_unsol_atready)
 }
 
 static const struct modem_cmd response_cmds[] = {
-	MODEM_CMD("OK", on_cmd_ok, 0U, ""),
-	MODEM_CMD("ERROR", on_cmd_error, 0U, ""),
+    MODEM_CMD("OK", on_cmd_ok, 0U, ""),
+    MODEM_CMD("ERROR", on_cmd_error, 0U, ""),
 };
 
 static const struct modem_cmd unsol_cmds[] = {
-	MODEM_CMD("ATREADY", on_cmd_unsol_atready, 0U, ""),
+    MODEM_CMD("ATREADY", on_cmd_unsol_atready, 0U, ""),
 };
 
 /* Commands sent to the modem to set it up at boot time. */
 static const struct setup_cmd setup_cmds[] = {
-	SETUP_CMD_NOHANDLE("AT"),
-	SETUP_CMD_NOHANDLE("ATE0"),
-	SETUP_CMD_NOHANDLE("AT+IPR=230400"),
-	SETUP_CMD_NOHANDLE("AT+CFUN=1"),
-	SETUP_CMD_NOHANDLE("AT+CGNETLED=1"),
-	SETUP_CMD_NOHANDLE("AT+CTZR=1"),
-	SETUP_CMD_NOHANDLE("AT+CTZU=1"),
+    SETUP_CMD_NOHANDLE("AT"),
+    SETUP_CMD_NOHANDLE("ATE0"),
+    SETUP_CMD_NOHANDLE("AT+IPR=230400"),
+    SETUP_CMD_NOHANDLE("AT+CFUN=1"),
+    SETUP_CMD_NOHANDLE("AT+CGNETLED=1"),
+    SETUP_CMD_NOHANDLE("AT+CTZR=1"),
+    SETUP_CMD_NOHANDLE("AT+CTZU=1"),
 };
 
 /* Func: modem_rx
@@ -155,7 +154,7 @@ static void pin_init(void)
 	k_sleep(K_MSEC(750));
 
 	/* MDM_POWER -> 0 and wait for ~500msecs as UART remains inl"inactive"
-     * state for some time after the power signal is enabled.
+	 * state for some time after the power signal is enabled.
 	 */
 	gpio_pin_set_dt(&power_gpio, 1);
 	k_sleep(K_MSEC(500));
@@ -171,30 +170,27 @@ static void pin_init(void)
 static int modem_setup(void)
 {
 	int err = 0;
-    int at_retry = 0;
+	int at_retry = 0;
 
 	/* Setup the pins to ensure that Modem is enabled. */
 	pin_init();
 
-
 	/* Let the modem respond. */
 	LOG_INF("Waiting for modem to respond");
 
-    do {
-        err = modem_cmd_send(&mctx.iface, &mctx.cmd_handler,
-                NULL, 0U,
-                "AT",
-                &mdata.sem_response, MDM_MAX_AT_BOOT_TIME);
-        if (err) {
+	do {
+		err = modem_cmd_send(&mctx.iface, &mctx.cmd_handler, NULL, 0U,
+		    "AT", &mdata.sem_response, MDM_MAX_AT_BOOT_TIME);
+		if (err) {
 			LOG_WRN("Timeout waiting for AT OK");
 		}
-    } while (at_retry < MDM_MAX_AT_RETRY && err);
+	} while (at_retry < MDM_MAX_AT_RETRY && err);
 
 	/* Run setup commands on the modem. */
 	err = modem_cmd_handler_setup_cmds(&mctx.iface, &mctx.cmd_handler,
-            setup_cmds, ARRAY_SIZE(setup_cmds),
-            &mdata.sem_response, MDM_CMD_TIMEOUT);
-    return err;
+	    setup_cmds, ARRAY_SIZE(setup_cmds), &mdata.sem_response,
+	    MDM_CMD_TIMEOUT);
+	return err;
 }
 
 static int modem_init(const struct device *dev)
@@ -208,33 +204,34 @@ static int modem_init(const struct device *dev)
 
 	/* cmd handler setup */
 	const struct modem_cmd_handler_config cmd_handler_config = {
-		.match_buf = &mdata.cmd_match_buf[0],
-		.match_buf_len = sizeof(mdata.cmd_match_buf),
-		.buf_pool = &mdm_recv_pool,
-		.alloc_timeout = BUF_ALLOC_TIMEOUT,
-		.eol = "\r\n",
-		.user_data = NULL,
-		.response_cmds = response_cmds,
-		.response_cmds_len = ARRAY_SIZE(response_cmds),
-		.unsol_cmds = unsol_cmds,
-		.unsol_cmds_len = ARRAY_SIZE(unsol_cmds),
+	    .match_buf = &mdata.cmd_match_buf[0],
+	    .match_buf_len = sizeof(mdata.cmd_match_buf),
+	    .buf_pool = &mdm_recv_pool,
+	    .alloc_timeout = BUF_ALLOC_TIMEOUT,
+	    .eol = "\r\n",
+	    .user_data = NULL,
+	    .response_cmds = response_cmds,
+	    .response_cmds_len = ARRAY_SIZE(response_cmds),
+	    .unsol_cmds = unsol_cmds,
+	    .unsol_cmds_len = ARRAY_SIZE(unsol_cmds),
 	};
 
-	err = modem_cmd_handler_init(&mctx.cmd_handler,
-            &mdata.cmd_handler_data, &cmd_handler_config);
+	err = modem_cmd_handler_init(
+	    &mctx.cmd_handler, &mdata.cmd_handler_data, &cmd_handler_config);
 	if (err < 0) {
 		goto error;
 	}
 
 	/* modem interface */
 	const struct modem_iface_uart_config uart_config = {
-		.rx_rb_buf = &mdata.iface_rb_buf[0],
-		.rx_rb_buf_len = sizeof(mdata.iface_rb_buf),
-		.dev = MDM_UART_DEV,
-		.hw_flow_control = DT_PROP(MDM_UART_NODE, hw_flow_control),
+	    .rx_rb_buf = &mdata.iface_rb_buf[0],
+	    .rx_rb_buf_len = sizeof(mdata.iface_rb_buf),
+	    .dev = MDM_UART_DEV,
+	    .hw_flow_control = DT_PROP(MDM_UART_NODE, hw_flow_control),
 	};
 
-	err = modem_iface_uart_init(&mctx.iface, &mdata.iface_data, &uart_config);
+	err =
+	    modem_iface_uart_init(&mctx.iface, &mdata.iface_data, &uart_config);
 	if (err < 0) {
 		goto error;
 	}
@@ -270,12 +267,10 @@ static int modem_init(const struct device *dev)
 	}
 
 	/* start RX thread */
-	k_tid_t thread_id = k_thread_create(&modem_rx_thread,
-            modem_rx_stack, K_KERNEL_STACK_SIZEOF(modem_rx_stack),
-			(k_thread_entry_t)modem_rx,
-            NULL, NULL, NULL,
-            K_PRIO_COOP(7), 0, K_NO_WAIT);
-    k_thread_name_set(thread_id, "modem_rx");
+	k_tid_t thread_id = k_thread_create(&modem_rx_thread, modem_rx_stack,
+	    K_KERNEL_STACK_SIZEOF(modem_rx_stack), (k_thread_entry_t)modem_rx,
+	    NULL, NULL, NULL, K_PRIO_COOP(7), 0, K_NO_WAIT);
+	k_thread_name_set(thread_id, "modem_rx");
 
 	return modem_setup();
 
@@ -283,8 +278,5 @@ error:
 	return err;
 }
 
-DEVICE_DT_INST_DEFINE(0, modem_init,
-        NULL, &mdata, NULL,
-        POST_KERNEL, CONFIG_MODEM_LYNQ_L5XX_INIT_PRIORITY,
-        NULL);
-
+DEVICE_DT_INST_DEFINE(0, modem_init, NULL, &mdata, NULL, POST_KERNEL,
+    CONFIG_MODEM_LYNQ_L5XX_INIT_PRIORITY, NULL);
