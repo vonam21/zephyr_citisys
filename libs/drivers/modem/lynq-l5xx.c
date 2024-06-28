@@ -18,6 +18,7 @@ static struct modem_context mctx;
 static struct k_work_q modem_workq;
 static K_KERNEL_STACK_DEFINE(
     modem_workq_stack, CONFIG_MODEM_LYNQ_L5XX_RX_WORKQ_STACK_SIZE);
+int count_reset_mdm = 0;
 static K_KERNEL_STACK_DEFINE(
     modem_rx_stack, CONFIG_MODEM_LYNQ_L5XX_RX_STACK_SIZE);
 NET_BUF_POOL_DEFINE(
@@ -212,6 +213,31 @@ static void pin_init(void)
 	LOG_INF("... Done!");
 }
 
+static void modem_query_sim_persecond(struct k_work *work)
+{
+	int ret = 0;
+	ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler, NULL, 0U,
+	    "AT+CCID", &mdata.sem_response, MDM_CMD_TIMEOUT);
+	if (ret < 0) {
+		count_reset_mdm++;
+		mdata.is_sim_inserted = 0;
+		LOG_WRN("SIM card not found query per sec");
+	}
+
+	if (ret == 0) {
+		count_reset_mdm = 0;
+		mdata.is_sim_inserted = 1;
+	}
+
+	if (count_reset_mdm >= 10) {
+		count_reset_mdm = 0;
+		modem_restart();
+		sys_reboot(SYS_REBOOT_COLD);
+	}
+	k_work_reschedule_for_queue(
+	    &modem_workq, &mdata.sim_info_query_work, K_SECONDS(2));
+}
+
 /* Func: modem_setup
  * Desc: This function is used to setup the modem from zero. The idea
  * is that this function will be called right after the modem is
@@ -254,6 +280,7 @@ static int modem_init(const struct device *dev)
 	ARG_UNUSED(dev);
 
 	k_sem_init(&mdata.sem_response, 0, 1);
+	mdata.is_sim_inserted = 0;
 	k_work_queue_start(&modem_workq, modem_workq_stack,
 	    K_KERNEL_STACK_SIZEOF(modem_workq_stack), K_PRIO_COOP(7), NULL);
 	/* cmd handler setup */

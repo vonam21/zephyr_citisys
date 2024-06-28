@@ -1,10 +1,10 @@
 #ifndef _PROJECT_LIBS_LYNQ_L5XX_H_
 #define _PROJECT_LIBS_LYNQ_L5XX_H_
-
 #include <zephyr/kernel.h>
 #include <zephyr/net/net_if.h>
 #include <zephyr/net/offloaded_netdev.h>
 #include <zephyr/net/socket_offload.h>
+#include <zephyr/sys/reboot.h>
 #include <zephyr/types.h>
 /* Direct "include"s from drivers/modem */
 #include <modem_cmd_handler.h>
@@ -90,6 +90,8 @@ struct modem_data {
 	struct k_work_delayable sim_info_query_work;
 	/* Semaphore(s) */
 	struct k_sem sem_response;
+	/* Modem sim status */
+	int is_sim_inserted;
 };
 
 #endif /* _PROJECT_LIBS_LYNQ_L5XX_H_ */
