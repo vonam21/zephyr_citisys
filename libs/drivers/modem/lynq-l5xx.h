@@ -2,8 +2,8 @@
 #define _PROJECT_LIBS_LYNQ_L5XX_H_
 
 #include <zephyr/kernel.h>
+#include <zephyr/net/net_if.h>
 #include <zephyr/types.h>
-
 /* Direct "include"s from drivers/modem */
 #include <modem_cmd_handler.h>
 #include <modem_context.h>
