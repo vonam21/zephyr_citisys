@@ -104,6 +104,29 @@ struct modem_data {
 	/* Modem sim status */
 	int is_sim_inserted;
 };
+
+#define SIM_INFO(pname_, imsi_, apn_, username_, password_)           \
+	{                                                             \
+		.pname = pname_, .imsi = imsi_,                       \
+		.imsi_len = (uint16_t)sizeof(imsi_) - 1, .apn = apn_, \
+		.username = username_, .password = password_,         \
+	}
+
+struct sim_info {
+	/* Phone provider's name */
+	const char *pname;
+	/* IMSI of phone provider */
+	const char *imsi;
+	/* IMSI length of phone provider */
+	uint16_t imsi_len;
+	/* APN of phone provider */
+	const char *apn;
+	/* Username of apn */
+	const char *username;
+	/* Password of apn */
+	const char *password;
+};
+
 #if defined(CONFIG_DNS_RESOLVER) || defined(CONFIG_MODEM_LYNQ_L5XX_DNS_RESOLVER)
 static struct zsock_addrinfo result;
 static struct sockaddr result_addr;

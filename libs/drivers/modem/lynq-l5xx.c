@@ -53,6 +53,16 @@ static int modem_atoi(
 	return ret;
 }
 
+static const struct sim_info sim_infos[] = {
+    SIM_INFO("Viettel", "4520499", "v-internet", "", ""),
+    SIM_INFO("Viettel-Truphone", "45204", "iot.truphone.comt", "", ""),
+    SIM_INFO("Mobifone", "4520199", "m-wap", "mms", "mms"),
+    SIM_INFO("Mobifone-Truphone", "45201", "iot.truphone.comt", "", ""),
+    SIM_INFO("Vinaphone", "4520299", "m3-world", "mms", "mms"),
+    SIM_INFO("Vinaphone-Truphone", "45202", "iot.truphone.comt", "", ""),
+    SIM_INFO("Vietnammobile", "4520599", "internet", "", ""),
+};
+
 /* Handler: OK */
 MODEM_CMD_DEFINE(on_cmd_ok)
 {
@@ -109,6 +119,39 @@ static const struct modem_cmd response_cmds[] = {
 static const struct modem_cmd unsol_cmds[] = {
     MODEM_CMD("ATREADY", on_cmd_unsol_atready, 0U, ""),
 };
+
+const struct sim_info *find_sim_info(
+    const struct sim_info *si, char *imsi, size_t si_len)
+{
+	for (size_t i = 0; i < si_len; i++) {
+		if (strncmp(si[i].imsi, imsi, strlen(imsi)) == 0) {
+			return &si[i];
+		}
+	}
+	return NULL;
+}
+
+/* Handler: <COPS>: <mode>,<format>,<oper>,<Act> */
+MODEM_CMD_DEFINE(on_cmd_atcmdinfo_cops)
+{
+	size_t sim_info_len = ARRAY_SIZE(sim_infos);
+	char imsi[6];
+	memcpy(imsi, &argv[2][1], 5);
+	imsi[5] = '\0';
+	const struct sim_info *match_sim_info =
+	    find_sim_info(sim_infos, imsi, sim_info_len);
+
+	if (match_sim_info) {
+		mdata.mdm_providername = (char *)match_sim_info->pname;
+		mdata.mdm_apn = (char *)match_sim_info->apn;
+		mdata.mdm_username = (char *)match_sim_info->username;
+		mdata.mdm_password = (char *)match_sim_info->password;
+	}
+
+	/* Log the received information. */
+	LOG_INF("Provider name: %s", mdata.mdm_providername);
+	return 0;
+}
 
 /* Commands sent to the modem to set it up at boot time. */
 static const struct setup_cmd setup_cmds[] = {
@@ -321,6 +364,22 @@ static void pin_init(void)
 	k_sleep(K_MSEC(500));
 
 	LOG_INF("... Done!");
+}
+
+static int modem_find_sim_card_info(void)
+{
+	int ret = 0;
+
+	struct modem_cmd success_cmd =
+	    MODEM_CMD("+COPS: ", on_cmd_atcmdinfo_cops, 4U, ",");
+
+	ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler, &success_cmd, 1U,
+	    "AT+COPS?", &mdata.sem_response, MDM_REGISTRATION_TIMEOUT);
+	if (ret < 0) {
+		LOG_WRN("SIM card not found info");
+	}
+
+	return ret;
 }
 
 static void modem_query_sim_persecond(struct k_work *work)
