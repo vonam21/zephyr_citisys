@@ -56,6 +56,9 @@
 #define RSSI_MIN_VAL -110
 #define SIM_QUERY_TIMEOUT_MSECS 100
 
+#define MDM_WAIT_FOR_SIM_CARD_INFO_COUNT 10
+#define MDM_WAIT_FOR_SIM_CARD_INFO_DELAY 500
+
 /* Modem ATOI routine. */
 #define ATOI(s_, value_, desc_) modem_atoi(s_, value_, desc_, __func__)
 

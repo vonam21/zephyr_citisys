@@ -376,6 +376,7 @@ static int modem_setup(void)
 {
 	int err = 0;
 	int at_retry = 0;
+	int count_mdm_query_sim_card_info = 0;
 	/* stop sim info query work */
 	k_work_cancel_delayable(&mdata.sim_info_query_work);
 	/* stop RSSI delay work */
@@ -402,6 +403,21 @@ static int modem_setup(void)
 		LOG_DBG("error setup cmds");
 		goto restart_system;
 	}
+
+	k_sleep(K_SECONDS(3));
+	while (count_mdm_query_sim_card_info++ <
+	       MDM_WAIT_FOR_SIM_CARD_INFO_COUNT) {
+		err = modem_find_sim_card_info();
+		if (err == 0) {
+			break;
+		}
+		k_msleep(MDM_WAIT_FOR_SIM_CARD_INFO_DELAY);
+	}
+	if (err < 0) {
+		LOG_ERR("Failed simcardinfo init");
+		goto restart_system;
+	}
+
 	k_work_reschedule_for_queue(
 	    &modem_workq, &mdata.rssi_query_work, K_SECONDS(15));
 	k_work_reschedule_for_queue(
