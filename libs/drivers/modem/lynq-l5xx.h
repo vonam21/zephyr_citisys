@@ -86,6 +86,11 @@ struct modem_data {
 	char *mdm_username;
 	char *mdm_password;
 
+	/* ignore URC CEREG after AT+NETOPEN*/
+	int net_open_ignore_cereg;
+	/* Modem network status */
+	int is_net_open;
+
 	/* socket data */
 	struct modem_socket_config socket_config;
 
@@ -101,6 +106,7 @@ struct modem_data {
 	/* Semaphore(s) */
 	struct k_sem sem_response;
 	struct k_sem sem_dns;
+	struct k_sem sem_net_rdy;
 	/* Modem sim status */
 	int is_sim_inserted;
 };

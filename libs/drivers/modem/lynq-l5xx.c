@@ -116,9 +116,41 @@ static const struct modem_cmd response_cmds[] = {
     MODEM_CMD("ERROR", on_cmd_error, 0U, ""),
 };
 
-static const struct modem_cmd unsol_cmds[] = {
-    MODEM_CMD("ATREADY", on_cmd_unsol_atready, 0U, ""),
-};
+/* Handler: +NETOPEN:SUCCESS, +NETOPEN:FAIL */
+MODEM_CMD_DEFINE(on_cmd_net_open_pdp)
+{
+	if (strcmp(argv[0], "SUCCESS") == 0) {
+		mdata.is_net_open = 1;
+	} else {
+		mdata.is_net_open = 0;
+	}
+	modem_cmd_handler_set_error(data, 0);
+	k_sem_give(&mdata.sem_net_rdy);
+	return 0;
+}
+
+/* Handler: +NETOPEN:<state> */
+MODEM_CMD_DEFINE(on_cmd_net_status)
+{
+	mdata.is_net_open = ATOI(argv[0], 0, "state");
+	modem_cmd_handler_set_error(data, 0);
+	k_sem_give(&mdata.sem_net_rdy);
+	return 0;
+}
+
+/* Handler: "RDY" unsol command */
+MODEM_CMD_DEFINE(on_cmd_unsol_cereg)
+{
+	mdata.is_net_open = ATOI(argv[0], 0, "status network");
+	if (mdata.is_net_open == 0 && mdata.net_open_ignore_cereg == 0) {
+		modem_restart();
+		sys_reboot(SYS_REBOOT_COLD);
+		return 0;
+	}
+	modem_cmd_handler_set_error(data, 0);
+	k_sem_give(&mdata.sem_response);
+	return 0;
+}
 
 const struct sim_info *find_sim_info(
     const struct sim_info *si, char *imsi, size_t si_len)
@@ -162,6 +194,11 @@ static const struct setup_cmd setup_cmds[] = {
     SETUP_CMD_NOHANDLE("AT+CGNETLED=1"),
     SETUP_CMD_NOHANDLE("AT+CTZR=1"),
     SETUP_CMD_NOHANDLE("AT+CTZU=1"),
+};
+
+static const struct modem_cmd unsol_cmds[] = {
+    MODEM_CMD("ATREADY", on_cmd_unsol_atready, 0U, ""),
+    MODEM_CMD("+CEREG:", on_cmd_unsol_cereg, 1, ""),
 };
 
 #if defined(CONFIG_DNS_RESOLVER) || defined(CONFIG_MODEM_LYNQ_L5XX_DNS_RESOLVER)
@@ -366,6 +403,66 @@ static void pin_init(void)
 	LOG_INF("... Done!");
 }
 
+int modem_pdp_active_impl(void)
+{
+	int ret = 0;
+	int count_mdm_pdp_active = 0;
+	char send_buf[sizeof("AT+QICSGP=#,#,###############,#####,#####")] = {
+	    0};
+	snprintk(send_buf, sizeof(send_buf),
+	    "AT+QICSGP=1,1,\"%s\",\"%s\",\"%s\"", mdata.mdm_apn,
+	    mdata.mdm_username, mdata.mdm_password);
+
+	struct modem_cmd open_cmd =
+	    MODEM_CMD("+NETOPEN:", on_cmd_net_open_pdp, 1U, "");
+	struct modem_cmd net_status =
+	    MODEM_CMD("+NETOPEN:", on_cmd_net_status, 1U, "");
+
+	ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler, &net_status, 1U,
+	    "AT+NETOPEN?", &mdata.sem_net_rdy, MDM_CMD_TIMEOUT);
+	if (ret < 0) {
+		LOG_ERR("check network open failed, err = %d", ret);
+		goto error;
+	}
+	if (mdata.is_net_open == 1) {
+		LOG_ERR("net work is opening");
+		ret = 0;
+		goto error;
+	}
+
+	/*set apn and active pdp*/
+	do {
+		/*if net_open_ignore_cereg is set,URC +CEREG ignore */
+		mdata.net_open_ignore_cereg = 1;
+		ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler, NULL, 0U,
+		    send_buf, &mdata.sem_response, MDM_CMD_TIMEOUT);
+		if (ret < 0) {
+			LOG_ERR("modem configure apn failed err = %d", ret);
+			continue;
+		}
+		ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler, &open_cmd,
+		    1U, "AT+NETOPEN", &mdata.sem_net_rdy, MDM_CMD_CONN_TIMEOUT);
+	} while (count_mdm_pdp_active++ < MDM_PDP_ACT_RETRY_COUNT && ret < 0);
+	/*allow check URC to track network registration*/
+	mdata.net_open_ignore_cereg = 0;
+
+	if (ret < 0) {
+		LOG_ERR("failed active many times");
+		goto error;
+	}
+	// It appears that after a successful netopen, the first AT command will
+	// return bad values This line is to clear the chip off that state by
+	// waiting on a cpin command swiftly
+	ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler, NULL, 0U,
+	    "AT+CPIN?", &mdata.sem_response, K_MSEC(200));
+	if (ret < 0) {
+		LOG_ERR("first cmd after NETOPEN failed");
+		goto error;
+	}
+error:
+	return ret;
+}
+
 static int modem_find_sim_card_info(void)
 {
 	int ret = 0;
@@ -442,6 +539,8 @@ static int modem_setup(void)
 	/* stop RSSI delay work */
 	k_work_cancel_delayable(&mdata.rssi_query_work);
 	/* Setup the pins to ensure that Modem is enabled. */
+	/*allow check URC to track network registration*/
+	mdata.net_open_ignore_cereg = 1;
 	pin_init();
 
 	/* Let the modem respond. */
@@ -465,6 +564,7 @@ static int modem_setup(void)
 	}
 
 	k_sleep(K_SECONDS(3));
+	mdata.net_open_ignore_cereg = 0;
 	while (count_mdm_query_sim_card_info++ <
 	       MDM_WAIT_FOR_SIM_CARD_INFO_COUNT) {
 		err = modem_find_sim_card_info();
@@ -516,7 +616,7 @@ static int modem_init(const struct device *dev)
 
 	int err;
 	ARG_UNUSED(dev);
-
+	k_sem_init(&mdata.sem_net_rdy, 0, 1);
 	k_sem_init(&mdata.sem_response, 0, 1);
 	k_sem_init(&mdata.sem_dns, 0, 1);
 	mdata.is_sim_inserted = 0;
