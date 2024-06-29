@@ -436,6 +436,7 @@ static int modem_setup(void)
 	int err = 0;
 	int at_retry = 0;
 	int count_mdm_query_sim_card_info = 0;
+	int count_mdm_query_rssi = 0;
 	/* stop sim info query work */
 	k_work_cancel_delayable(&mdata.sim_info_query_work);
 	/* stop RSSI delay work */
@@ -474,6 +475,22 @@ static int modem_setup(void)
 	}
 	if (err < 0) {
 		LOG_ERR("Failed simcardinfo init");
+		goto restart_system;
+	}
+
+	do {
+		modem_rssi_query_work(NULL);
+		if (mdata.mdm_rssi < RSSI_MAX_VAL ||
+		    mdata.mdm_rssi > RSSI_MIN_VAL) {
+			break;
+		}
+		k_sleep(MDM_WAIT_FOR_RSSI_DELAY);
+	} while (
+	    count_mdm_query_rssi++ < MDM_WAIT_FOR_RSSI_COUNT &&
+	    (mdata.mdm_rssi >= RSSI_MAX_VAL || mdata.mdm_rssi <= RSSI_MIN_VAL));
+
+	if (mdata.mdm_rssi >= RSSI_MAX_VAL || mdata.mdm_rssi <= RSSI_MIN_VAL) {
+		LOG_ERR(" Signal CSQ bad and restart system");
 		goto restart_system;
 	}
 
