@@ -152,6 +152,81 @@ static inline uint8_t *modem_get_mac(const struct device *dev)
 }
 
 #if defined(CONFIG_DNS_RESOLVER) || defined(CONFIG_MODEM_LYNQ_L5XX_DNS_RESOLVER)
+static int offload_getaddrinfo(const char *node, const char *service,
+    const struct zsock_addrinfo *hints, struct zsock_addrinfo **res)
+{
+	static const struct modem_cmd cmd =
+	    MODEM_CMD("+MDNSGIP:", on_cmd_dns, 2U, ",");
+	uint32_t port = 0U;
+	int ret;
+	/* DNS command + 128 bytes for domain name parameter */
+	char sendbuf[sizeof("AT+MDNSGIP='[]'\r") + 128];
+
+	/* Init result */
+	(void)memset(&result, 0, sizeof(result));
+	(void)memset(&result_addr, 0, sizeof(result_addr));
+
+	result.ai_family = hints->ai_family;
+	result_addr.sa_family = result.ai_family;
+	result.ai_addr = &result_addr;
+	result.ai_addrlen = sizeof(result_addr);
+	result.ai_canonname = result_canonname;
+	result_canonname[0] = '\0';
+	result.ai_protocol = IPPROTO_TCP;
+	result.ai_socktype = hints->ai_socktype;
+
+	if (service) {
+		port = ATOI(service, 0U, "port");
+		if (port < 1 || port > USHRT_MAX) {
+			return DNS_EAI_SERVICE;
+		}
+	}
+
+	if (port > 0U) {
+		if (result.ai_family == AF_INET) {
+			net_sin(&result_addr)->sin_port = htons(port);
+		}
+	}
+
+	/* Check to see if node is an IP address */
+	if (net_addr_pton(result.ai_family, node,
+	        &((struct sockaddr_in *)&result_addr)->sin_addr) == 0) {
+		*res = &result;
+		return 0;
+	}
+
+	/* User flagged node as numeric host, but we failed net_addr_pton */
+	if (hints && hints->ai_flags && AI_NUMERICHOST) {
+		return DNS_EAI_NONAME;
+	}
+
+	int retry_count = 0;
+
+retry_dns:
+	snprintk(sendbuf, sizeof(sendbuf), "AT+MDNSGIP=\"%s\"", node);
+	ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler, &cmd, 1U, sendbuf,
+	    &mdata.sem_response, MDM_DNS_TIMEOUT);
+	if (ret == -ETIMEDOUT && retry_count < 5) {
+		retry_count++;
+		k_msleep(1000);
+		goto retry_dns;
+	} else if (ret < 0) {
+		return ret;
+	}
+
+	ret = modem_cmd_handler_get_error(&mdata.cmd_handler_data);
+
+	if (ret != 0) {
+		return ret;
+	}
+	k_sem_take(&mdata.sem_dns, K_NO_WAIT);
+
+	*res = (struct zsock_addrinfo *)&result;
+	return 0;
+}
+#endif
+
+#if defined(CONFIG_DNS_RESOLVER) || defined(CONFIG_MODEM_LYNQ_L5XX_DNS_RESOLVER)
 const struct socket_dns_offload offload_dns_ops = {
     .getaddrinfo = offload_getaddrinfo,
     .freeaddrinfo = offload_freeaddrinfo,
@@ -289,6 +364,7 @@ static int modem_init(const struct device *dev)
 	ARG_UNUSED(dev);
 
 	k_sem_init(&mdata.sem_response, 0, 1);
+	k_sem_init(&mdata.sem_dns, 0, 1);
 	mdata.is_sim_inserted = 0;
 	k_work_queue_start(&modem_workq, modem_workq_stack,
 	    K_KERNEL_STACK_SIZEOF(modem_workq_stack), K_PRIO_COOP(7), NULL);

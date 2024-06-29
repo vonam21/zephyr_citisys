@@ -10,6 +10,7 @@
 #include <modem_cmd_handler.h>
 #include <modem_context.h>
 #include <modem_iface_uart.h>
+#include <modem_socket.h>
 
 #define MDM_UART_NODE DT_INST_BUS(0)
 #define MDM_UART_DEV DEVICE_DT_GET(MDM_UART_NODE)
@@ -82,6 +83,9 @@ struct modem_data {
 	char *mdm_username;
 	char *mdm_password;
 
+	/* socket data */
+	struct modem_socket_config socket_config;
+
 #if defined(CONFIG_MODEM_SIM_NUMBERS)
 	char mdm_iccid[MDM_ICCID_LENGTH];
 #endif /* #if defined(CONFIG_MODEM_SIM_NUMBERS) */
@@ -90,8 +94,14 @@ struct modem_data {
 	struct k_work_delayable sim_info_query_work;
 	/* Semaphore(s) */
 	struct k_sem sem_response;
+	struct k_sem sem_dns;
 	/* Modem sim status */
 	int is_sim_inserted;
 };
+#if defined(CONFIG_DNS_RESOLVER) || defined(CONFIG_MODEM_LYNQ_L5XX_DNS_RESOLVER)
+static struct zsock_addrinfo result;
+static struct sockaddr result_addr;
+static char result_canonname[DNS_MAX_NAME_SIZE + 1];
+#endif
 
 #endif /* _PROJECT_LIBS_LYNQ_L5XX_H_ */
