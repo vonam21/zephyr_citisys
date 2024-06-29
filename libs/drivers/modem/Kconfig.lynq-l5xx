@@ -17,6 +17,11 @@ config MODEM_LYNQ_L5XX_RX_STACK_SIZE
 	default 1028
 	help
 	  This stack is used by the LYNQ L5XX RX thread.
+config MODEM_LYNQ_L5XX_DNS_RESOLVER
+	bool "Enable direct support for DNS resolver bypassing NET_NATIVE"
+	default n
+	help
+	  This function performs DNS resolution without using NET_NATIVE dns offload route.
 
 config MODEM_LYNQ_L5XX_RX_WORKQ_STACK_SIZE
 	int "Stack size for the LYNQ L5XX modem driver work queue"

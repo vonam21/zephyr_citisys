@@ -151,6 +151,15 @@ static inline uint8_t *modem_get_mac(const struct device *dev)
 	return data->mac_addr;
 }
 
+#if defined(CONFIG_DNS_RESOLVER) || defined(CONFIG_MODEM_LYNQ_L5XX_DNS_RESOLVER)
+const struct socket_dns_offload offload_dns_ops = {
+    .getaddrinfo = offload_getaddrinfo,
+    .freeaddrinfo = offload_freeaddrinfo,
+};
+#endif
+
+static int offload_socket(int family, int type, int proto);
+
 /* Setup the Modem NET Interface. */
 static void modem_net_iface_init(struct net_if *iface)
 {
@@ -359,6 +368,22 @@ static int modem_init(const struct device *dev)
 error:
 	return err;
 }
+
+static int offload_socket(int family, int type, int proto)
+{
+	int ret;
+
+	/* defer modem's socket create call to bind() */
+	ret = modem_socket_get(&mdata.socket_config, family, type, proto);
+	if (ret < 0) {
+		errno = -ret;
+		return -1;
+	}
+
+	errno = 0;
+	return ret;
+}
+
 static struct offloaded_if_api api_funcs = {
     .iface_api.init = modem_net_iface_init,
 };
