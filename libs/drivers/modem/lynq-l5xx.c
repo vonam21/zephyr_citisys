@@ -348,6 +348,25 @@ static void modem_query_sim_persecond(struct k_work *work)
 	    &modem_workq, &mdata.sim_info_query_work, K_SECONDS(2));
 }
 
+static void modem_rssi_query_work(struct k_work *work)
+{
+	struct modem_cmd cmd[] = {
+	    MODEM_CMD("+CSQ: ", on_cmd_atcmdinfo_rssi_cesq, 2U, ",")};
+	static char *send_cmd = "AT+CSQ";
+	int ret;
+
+	ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler, cmd,
+	    ARRAY_SIZE(cmd), send_cmd, &mdata.sem_response, MDM_CMD_TIMEOUT);
+	if (ret < 0) {
+		LOG_ERR("AT+CSQ ret:%d", ret);
+	}
+
+	if (work) {
+		k_work_reschedule_for_queue(&modem_workq,
+		    &mdata.rssi_query_work, K_SECONDS(RSSI_TIMEOUT_SECS));
+	}
+}
+
 /* Func: modem_setup
  * Desc: This function is used to setup the modem from zero. The idea
  * is that this function will be called right after the modem is
