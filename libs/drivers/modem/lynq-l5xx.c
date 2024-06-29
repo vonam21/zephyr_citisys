@@ -114,6 +114,7 @@ MODEM_CMD_DEFINE(on_cmd_unsol_atready)
 static const struct modem_cmd response_cmds[] = {
     MODEM_CMD("OK", on_cmd_ok, 0U, ""),
     MODEM_CMD("ERROR", on_cmd_error, 0U, ""),
+    MODEM_CMD("+CME ERROR: ", on_cmd_exterror, 1U, ""),
 };
 
 /* Handler: +NETOPEN:SUCCESS, +NETOPEN:FAIL */
