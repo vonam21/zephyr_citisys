@@ -121,6 +121,24 @@ static const struct setup_cmd setup_cmds[] = {
     SETUP_CMD_NOHANDLE("AT+CTZU=1"),
 };
 
+#if defined(CONFIG_DNS_RESOLVER) || defined(CONFIG_MODEM_LYNQ_L5XX_DNS_RESOLVER)
+/* Handler: +MDNSGIP:<domain name>,<ip address> */
+MODEM_CMD_DEFINE(on_cmd_dns)
+{
+	/* FIXME: Hard coded to return IPv4 addresses */
+	result.ai_family = AF_INET;
+
+	/* skip beginning quote when parsing */
+	(void)net_addr_pton(result.ai_family, &argv[1][0],
+	    &((struct sockaddr_in *)&result_addr)->sin_addr);
+
+	((struct sockaddr_in *)&result_addr)->sin_family = AF_INET;
+	k_sem_give(&mdata.sem_dns);
+	k_sem_give(&mdata.sem_response);
+	return 0;
+}
+#endif
+
 static inline uint32_t hash32(char *str, int len)
 {
 #define HASH_MULTIPLIER 37
