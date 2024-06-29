@@ -494,6 +494,11 @@ static int modem_setup(void)
 		goto restart_system;
 	}
 
+	err = modem_pdp_active_impl();
+	if (err < 0) {
+		goto restart_system;
+	}
+
 	k_work_reschedule_for_queue(
 	    &modem_workq, &mdata.rssi_query_work, K_SECONDS(15));
 	k_work_reschedule_for_queue(
