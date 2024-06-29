@@ -245,6 +245,14 @@ retry_dns:
 #endif
 
 #if defined(CONFIG_DNS_RESOLVER) || defined(CONFIG_MODEM_LYNQ_L5XX_DNS_RESOLVER)
+static void offload_freeaddrinfo(struct zsock_addrinfo *res)
+{
+	/* using static result from offload_getaddrinfo() -- no need to free */
+	res = NULL;
+}
+#endif
+
+#if defined(CONFIG_DNS_RESOLVER) || defined(CONFIG_MODEM_LYNQ_L5XX_DNS_RESOLVER)
 const struct socket_dns_offload offload_dns_ops = {
     .getaddrinfo = offload_getaddrinfo,
     .freeaddrinfo = offload_freeaddrinfo,
