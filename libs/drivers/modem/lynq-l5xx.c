@@ -397,11 +397,19 @@ static int modem_setup(void)
 	/* Run setup commands on the modem. */
 	err = modem_cmd_handler_setup_cmds(&mctx.iface, &mctx.cmd_handler,
 	    setup_cmds, ARRAY_SIZE(setup_cmds), &mdata.sem_response,
-	    MDM_CMD_TIMEOUT);
+	    MDM_REGISTRATION_TIMEOUT);
+	if (err) {
+		LOG_DBG("error setup cmds");
+		goto restart_system;
+	}
 	k_work_reschedule_for_queue(
 	    &modem_workq, &mdata.rssi_query_work, K_SECONDS(15));
 	k_work_reschedule_for_queue(
 	    &modem_workq, &mdata.sim_info_query_work, K_SECONDS(2));
+	return err;
+restart_system:
+	modem_restart();
+	sys_reboot(SYS_REBOOT_COLD);
 	return err;
 }
 
