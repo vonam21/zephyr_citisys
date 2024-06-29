@@ -359,6 +359,8 @@ static int modem_setup(void)
 	int at_retry = 0;
 	/* stop sim info query work */
 	k_work_cancel_delayable(&mdata.sim_info_query_work);
+	/* stop RSSI delay work */
+	k_work_cancel_delayable(&mdata.rssi_query_work);
 	/* Setup the pins to ensure that Modem is enabled. */
 	pin_init();
 
@@ -377,6 +379,8 @@ static int modem_setup(void)
 	err = modem_cmd_handler_setup_cmds(&mctx.iface, &mctx.cmd_handler,
 	    setup_cmds, ARRAY_SIZE(setup_cmds), &mdata.sem_response,
 	    MDM_CMD_TIMEOUT);
+	k_work_reschedule_for_queue(
+	    &modem_workq, &mdata.rssi_query_work, K_SECONDS(15));
 	k_work_reschedule_for_queue(
 	    &modem_workq, &mdata.sim_info_query_work, K_SECONDS(2));
 	return err;
@@ -463,6 +467,7 @@ static int modem_init(const struct device *dev)
 	    K_KERNEL_STACK_SIZEOF(modem_rx_stack), (k_thread_entry_t)modem_rx,
 	    NULL, NULL, NULL, K_PRIO_COOP(7), 0, K_NO_WAIT);
 	k_thread_name_set(thread_id, "modem_rx");
+	k_work_init_delayable(&mdata.rssi_query_work, modem_rssi_query_work);
 	k_work_init_delayable(
 	    &mdata.sim_info_query_work, modem_query_sim_persecond);
 	return modem_setup();
