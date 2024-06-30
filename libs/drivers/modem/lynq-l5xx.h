@@ -1,5 +1,6 @@
 #ifndef _PROJECT_LIBS_LYNQ_L5XX_H_
 #define _PROJECT_LIBS_LYNQ_L5XX_H_
+#include <quasal/drivers/modem/lynq-l5xx.h>
 #include <zephyr/kernel.h>
 #include <zephyr/net/net_if.h>
 #include <zephyr/net/offloaded_netdev.h>
